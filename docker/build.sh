@@ -44,7 +44,10 @@ for SERVICE in sava_1.0 sava_1.1 sava_frontend_1.2 sava_backend_1.2 sava_fronten
     if [ -d ${DIR}/../${SERVICE}/public ]; then
       cp -r ${DIR}/../${SERVICE}/public ${DIR}/target/${SERVICE}/public
     fi
-    cp ${DIR}/../${SERVICE}/${SERVICE} ${DIR}/target/${SERVICE}/  
+    if [ -s ${DIR}/../${SERVICE}/index.tmpl ]; then
+      cp -r ${DIR}/../${SERVICE}/index.tmpl ${DIR}/target/${SERVICE}/public/index.tmpl
+    fi
+    mv ${DIR}/../${SERVICE}/${SERVICE} ${DIR}/target/${SERVICE}/
     createDockerFileFor ${SERVICE}
   done
 
