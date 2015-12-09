@@ -32,7 +32,6 @@ body {
   padding: 30px;
 }
 
-
 /*
  * Header
  */
@@ -134,4 +133,27 @@ body {
   .cover-container {
     width: 700px;
   }
+}
+
+/*
+  Debug table
+*/
+
+.debug_table {
+  display: table;
+  text-align: left;
+}
+
+.debug_table_row  {
+  display: table-row;
+}
+
+.debug_table_left, .debug_table_middle {
+  display: table-cell;
+  font-weight: bold;
+}
+
+.debug_table_right {
+  display: table-cell;
+  text-decoration: underline;
 }

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sava</title>
+    <link rel="stylesheet" href="public/css/bootstrap.min.css">
+    <link rel="stylesheet" href="public/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="public/css/monolith.css">
+    <link rel="icon" type="image/png" href="public/favicon.png">
+</head>
+<body>
+
+    <div class="site-wrapper">
+
+        <div class="site-wrapper-inner">
+            <div class="cover-container">
+
+                <div class="masthead clearfix">
+                    <div class="inner">
+                        <h1 class="cover-heading">Monolith 1.0</h1>
+                        <br>
+                        <div class="debug_table" style="display: {{ .display }};">
+                          <div class="debug_table_row">
+                            <div class="debug_table_left">
+                              <p>VERSION</p>
+                            </div>
+                            <div class="debug_table_middle">
+                              <p>&nbsp;:&nbsp;</p>
+                            </div>
+                            <div class="debug_table_right">
+                              <p>{{ .version }}</p>
+                            </div>
+                          </div>
+                          <div class="debug_table_row">
+                            <div class="debug_table_left">
+                              <p>INSTANCE</p>
+                            </div>
+                            <div class="debug_table_middle">
+                              <p>&nbsp;:&nbsp;</p>
+                            </div>
+                            <div class="debug_table_right">
+                              <p>{{ .uuid }}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="inner cover">
+                    <p id="content" class="lead"></p>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script type="text/javascript" src="public/js/jquery-2.1.3.min.js"></script>
+    <script type="text/javascript" src="public/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="public/js/monolith.js"></script>
+
+</body>
+</html>
