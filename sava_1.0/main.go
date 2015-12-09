@@ -8,9 +8,17 @@ import (
 	"strconv"
 )
 
-func main() {
+var (
+	port = flag.Int("port", 8080, "Sets the port to listen on")
+	debug = flag.Bool("debug", false, "Sets the debug mode")
+)
 
-	port := flag.Int("port", 8080, "Sets the port to listen on")
+func main() {
+	parameters()
+	server()
+}
+
+func parameters() {
 
 	flag.Parse()
 
@@ -19,6 +27,15 @@ func main() {
 	if envPort != "" {
 		*port, _ = strconv.Atoi(envPort)
 	}
+
+	envDebug := os.Getenv("SAVA_DEBUG")
+
+	if envDebug != "" {
+		*debug, _ = strconv.ParseBool(envDebug)
+	}
+}
+
+func server() {
 
 	r := gin.Default()
 	r.Static("/public", "./public")
