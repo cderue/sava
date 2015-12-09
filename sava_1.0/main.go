@@ -8,28 +8,53 @@ import (
 	"strconv"
 	"crypto/rand"
 	"fmt"
+	"syscall"
+	"os/signal"
 )
 
 var (
-	version = "sava:1.0"
-	uuid = generate_uuid()
+	uuid = generateUuid()
 	debug = flag.Bool("debug", false, "Sets the debug mode")
-	port = flag.Int("port", 8080, "Sets the port to listen on")
+	portHtml = flag.Int("html", 8080, "Sets the port to listen on")
+	portJson = flag.Int("json", 8081, "Sets the port to listen on")
 )
 
 func main() {
-	parameters()
-	server()
+
+	parseParameters()
+
+	go serverHtml()
+	go serverJson()
+
+	// Waiter keeps the program from exiting instantly.
+	waiter := make(chan bool)
+
+	// Catch a CTR+C exits so the cleanup routine is called.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+	go func() {
+		<-c
+		os.Exit(1)
+	}()
+
+	waiter <- true
 }
 
-func parameters() {
+func parseParameters() {
 
 	flag.Parse()
 
-	envPort := os.Getenv("SAVA_PORT")
+	envPortHtml := os.Getenv("SAVA_PORT_HTML")
 
-	if envPort != "" {
-		*port, _ = strconv.Atoi(envPort)
+	if envPortHtml != "" {
+		*portHtml, _ = strconv.Atoi(envPortHtml)
+	}
+
+	envPortJson := os.Getenv("SAVA_PORT_JSON")
+
+	if envPortJson != "" {
+		*portJson, _ = strconv.Atoi(envPortJson)
 	}
 
 	envDebug := os.Getenv("SAVA_DEBUG")
@@ -39,7 +64,7 @@ func parameters() {
 	}
 }
 
-func server() {
+func serverHtml() {
 
 	router := gin.Default()
 
@@ -64,10 +89,22 @@ func server() {
 		c.File("./public/favicon.png")
 	})
 
-	router.Run(":" + strconv.Itoa(*port))
+	router.Run(":" + strconv.Itoa(*portHtml))
 }
 
-func generate_uuid() (uuid string) {
+func serverJson() {
+
+	router := gin.Default()
+
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"version": version, "uuid": uuid})
+	})
+
+	router.Run(":" + strconv.Itoa(*portJson))
+}
+
+
+func generateUuid() (uuid string) {
 
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
