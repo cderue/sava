@@ -3,21 +3,41 @@ package main
 import (
     "os"
     "fmt"
+    "log"
+    "time"
     "flag"
+    "html"
     "strconv"
     "syscall"
+    "net/http"
+    "math/rand"
     "os/signal"
-    "github.com/gin-gonic/gin"
+    "encoding/json"
 )
 
+var hex = []rune("0123456789ABCDEF")
+
+type Response struct {
+    Id      string `json:"id"`
+    Runtime string `json:"runtime"`
+    Port    int    `json:"port"`
+    Path    string `json:"path"`
+}
+
 func main() {
+
+    rand.Seed(time.Now().UnixNano())
+
+    var id = os.Getenv("SAVA_RUNNER_ID")
+    var runtime = random(16)
+
+    fmt.Println("Id     : ", id)
+    fmt.Println("Runtime: ", runtime)
 
     // Waiter keeps the program from exiting instantly.
     waiter := make(chan bool)
 
-    cleanup := func() {
-        fmt.Println("Exit.")
-    }
+    cleanup := func() {}
 
     // Catch a CTR+C exits so the cleanup routine is called.
     c := make(chan os.Signal, 1)
@@ -35,10 +55,18 @@ func main() {
     count := count()
 
     for i := 1; i <= count; i++ {
-        go serve(i)
+        go serve(id, runtime, i)
     }
 
     waiter <- true
+}
+
+func random(n int) string {
+    b := make([]rune, n)
+    for i := range b {
+        b[i] = hex[rand.Intn(len(hex))]
+    }
+    return string(b)
 }
 
 func count() int {
@@ -52,7 +80,7 @@ func count() int {
     return count
 }
 
-func serve(index int) {
+func serve(id, runtime string, index int) {
 
     fmt.Println("Starting server: ", index)
 
@@ -70,11 +98,13 @@ func serve(index int) {
 
     flag.Parse()
 
-    r := gin.Default()
-    r.GET("/", func(c *gin.Context) {
-        c.String(200, fmt.Sprint(index))
+    fmt.Println("Listening on port: ", *port)
+
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        path := html.EscapeString(r.URL.Path)[1:]
+        response := Response{id, runtime, *port, path}
+        json.NewEncoder(w).Encode(response)
     })
 
-    fmt.Println("Listening on port: ", *port)
-    r.Run(":" + strconv.Itoa(*port))
+    log.Fatal(http.ListenAndServe(":" + strconv.Itoa(*port), nil))
 }
