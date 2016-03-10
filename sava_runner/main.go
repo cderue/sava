@@ -103,6 +103,8 @@ func serve(id, runtime string, index int) {
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         path := html.EscapeString(r.URL.Path)[1:]
         response := Response{id, runtime, *port, path}
+
+        w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(response)
     })
 
