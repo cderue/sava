@@ -156,19 +156,19 @@ func serveTcp(id, runtime string, index int) {
         if err != nil {
             fmt.Println("Error accepting: ", err.Error())
         } else {
-            go handleTcpRequest(conn)
+            go handleTcpRequest(id, runtime, *port, conn)
         }
     }
 }
 
-func handleTcpRequest(conn net.Conn) {
-    buf := make([]byte, 1024)
-    reqLen, err := conn.Read(buf)
+func handleTcpRequest(id, runtime string, port int, conn net.Conn) {
+    buffer := make([]byte, 1024)
+    length, err := conn.Read(buffer)
     if err != nil {
         fmt.Println("Error reading:", err.Error())
     } else {
-        conn.Write([]byte("Message received: "))
-        conn.Write(buf[:reqLen])
+        request := string(buffer[:length])
+        conn.Write([]byte(fmt.Sprint("{\"id\":\"", id, "\",\"runtime\":\"", runtime, "\",\"port\":", port, ",\"request\":\"", request, "\"}")))
     }
     conn.Close()
 }
