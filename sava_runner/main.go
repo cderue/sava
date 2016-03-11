@@ -2,18 +2,18 @@ package main
 
 import (
     "os"
+    "net"
     "fmt"
     "log"
     "time"
-    "flag"
     "html"
     "strconv"
     "syscall"
     "net/http"
     "math/rand"
+    "io/ioutil"
     "os/signal"
     "encoding/json"
-    "net"
 )
 
 var hex = []rune("0123456789ABCDEF")
@@ -98,30 +98,50 @@ func serveHttp(id, runtime string, index int) {
     fmt.Println("Starting HTTP server: ", index)
 
     envPort := os.Getenv(fmt.Sprint("SAVA_RUNNER_HTTP_PORT", index))
-    envPortNumber, _ := strconv.Atoi(envPort)
+    port, _ := strconv.Atoi(envPort)
 
-    if envPortNumber == 0 {
-        envPortNumber = 8080 + index
+    if port == 0 {
+        port = 8080 + index
     }
 
-    arg := fmt.Sprint("http-port-", index)
-    description := fmt.Sprint("Sets the HTTP port ", index, " to listen on")
+    urlDependency := os.Getenv(fmt.Sprint("SAVA_RUNNER_HTTP_DEPENDENCY_URL", index))
 
-    port := flag.Int(arg, envPortNumber, description)
+    fmt.Println("Listening on HTTP port: ", port)
 
-    flag.Parse()
-
-    fmt.Println("Listening on HTTP port: ", *port)
+    if len(urlDependency) > 0 {
+        fmt.Println("Will proxy requests to: ", urlDependency)
+    }
 
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         path := html.EscapeString(r.URL.Path)[1:]
-        response := Response{id, runtime, *port, path}
 
-        w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(response)
+        if len(urlDependency) == 0 {
+            httpResponse(Response{id, runtime, port, path}, w)
+        } else {
+            resp, err := http.Get(fmt.Sprint(urlDependency, "/", path))
+            if err != nil {
+                fmt.Println("Error connection to dependency ", urlDependency, " - ", err.Error())
+                httpResponse(Response{id, runtime, port, ""}, w)
+            } else {
+                defer resp.Body.Close()
+                body, err := ioutil.ReadAll(resp.Body)
+                if err != nil {
+                    fmt.Println("Error getting content from dependency ", urlDependency, " - ", err.Error())
+                    httpResponse(Response{id, runtime, port, ""}, w)
+                } else {
+                    w.Header().Set("Content-Type", "application/json")
+                    w.Write(body)
+                }
+            }
+        }
     })
 
-    log.Fatal(http.ListenAndServe(":" + strconv.Itoa(*port), nil))
+    log.Fatal(http.ListenAndServe(":" + strconv.Itoa(port), nil))
+}
+
+func httpResponse(response Response, w http.ResponseWriter) {
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
 }
 
 func serveTcp(id, runtime string, index int) {
@@ -129,22 +149,15 @@ func serveTcp(id, runtime string, index int) {
     fmt.Println("Starting TCP server: ", index)
 
     envPort := os.Getenv(fmt.Sprint("SAVA_RUNNER_TCP_PORT", index))
-    envPortNumber, _ := strconv.Atoi(envPort)
+    port, _ := strconv.Atoi(envPort)
 
-    if envPortNumber == 0 {
-        envPortNumber = 8090 + index
+    if port == 0 {
+        port = 8090 + index
     }
 
-    arg := fmt.Sprint("tcp-port-", index)
-    description := fmt.Sprint("Sets the TCP port ", index, " to listen on")
+    fmt.Println("Listening on TCP port: ", port)
 
-    port := flag.Int(arg, envPortNumber, description)
-
-    flag.Parse()
-
-    fmt.Println("Listening on TCP port: ", *port)
-
-    listener, err := net.Listen("tcp", fmt.Sprint(":", *port))
+    listener, err := net.Listen("tcp", fmt.Sprint(":", port))
     if err != nil {
         log.Fatal("Error listening: ", err.Error())
     }
@@ -156,7 +169,7 @@ func serveTcp(id, runtime string, index int) {
         if err != nil {
             fmt.Println("Error accepting: ", err.Error())
         } else {
-            go handleTcpRequest(id, runtime, *port, conn)
+            go handleTcpRequest(id, runtime, port, conn)
         }
     }
 }
