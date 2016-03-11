@@ -7,6 +7,7 @@ import (
     "log"
     "time"
     "html"
+    "bufio"
     "strconv"
     "syscall"
     "net/http"
@@ -155,8 +156,13 @@ func serveTcp(id, runtime string, index int) {
         port = 8090 + index
     }
 
-    fmt.Println("Listening on TCP port: ", port)
+    urlDependency := os.Getenv(fmt.Sprint("SAVA_RUNNER_TCP_DEPENDENCY_URL", index))
 
+    if len(urlDependency) > 0 {
+        fmt.Println("Will proxy requests to: ", urlDependency)
+    }
+
+    fmt.Println("Listening on TCP port: ", port)
     listener, err := net.Listen("tcp", fmt.Sprint(":", port))
     if err != nil {
         log.Fatal("Error listening: ", err.Error())
@@ -169,19 +175,37 @@ func serveTcp(id, runtime string, index int) {
         if err != nil {
             fmt.Println("Error accepting: ", err.Error())
         } else {
-            go handleTcpRequest(id, runtime, port, conn)
+            go handleTcpRequest(id, runtime, port, conn, urlDependency)
         }
     }
 }
 
-func handleTcpRequest(id, runtime string, port int, conn net.Conn) {
+func handleTcpRequest(id, runtime string, port int, conn net.Conn, urlDependency string) {
     buffer := make([]byte, 1024)
     length, err := conn.Read(buffer)
     if err != nil {
-        fmt.Println("Error reading:", err.Error())
+        fmt.Println("Error reading: ", err.Error())
     } else {
-        request := string(buffer[:length])
-        conn.Write([]byte(fmt.Sprint("{\"id\":\"", id, "\",\"runtime\":\"", runtime, "\",\"port\":", port, ",\"request\":\"", request, "\"}")))
+        if len(urlDependency) > 0 {
+            client, err := net.Dial("tcp", urlDependency)
+            if err != nil {
+                fmt.Println("Error reading: ", urlDependency, " - ", err.Error())
+                conn.Write([]byte(fmt.Sprint("{\"id\":\"", id, "\",\"runtime\":\"", runtime, "\",\"port\":", port, ",\"request\":\"\"}")))
+            } else {
+                client.Write(buffer[:length])
+                read := make([]byte, 1024)
+                len, err := bufio.NewReader(client).Read(read)
+                if err != nil {
+                    fmt.Println("Error reading: ", urlDependency, " - ", err.Error())
+                    conn.Write([]byte(fmt.Sprint("{\"id\":\"", id, "\",\"runtime\":\"", runtime, "\",\"port\":", port, ",\"request\":\"\"}")))
+                } else {
+                    conn.Write(read[:len])
+                }
+            }
+        } else {
+            request := string(buffer[:length])
+            conn.Write([]byte(fmt.Sprint("{\"id\":\"", id, "\",\"runtime\":\"", runtime, "\",\"port\":", port, ",\"request\":\"", request, "\"}")))
+        }
     }
     conn.Close()
 }
