@@ -13,6 +13,7 @@ import (
     "math/rand"
     "os/signal"
     "encoding/json"
+    "net"
 )
 
 var hex = []rune("0123456789ABCDEF")
@@ -52,10 +53,16 @@ func main() {
 
     defer cleanup()
 
-    count := count()
+    httpCount := countHttp()
 
-    for i := 1; i <= count; i++ {
-        go serve(id, runtime, i)
+    for i := 1; i <= httpCount; i++ {
+        go serveHttp(id, runtime, i)
+    }
+
+    tcpCount := countTcp()
+
+    for i := 1; i <= tcpCount; i++ {
+        go serveTcp(id, runtime, i)
     }
 
     waiter <- true
@@ -69,36 +76,42 @@ func random(n int) string {
     return string(b)
 }
 
-func count() int {
-    envCount := os.Getenv("SAVA_RUNNER_COUNT")
-    count, _ := strconv.Atoi(envCount)
+func countHttp() int {
+    return count("SAVA_RUNNER_HTTP_COUNT")
+}
 
+func countTcp() int {
+    return count("SAVA_RUNNER_TCP_COUNT")
+}
+
+func count(env string) int {
+    envCount := os.Getenv(env)
+    count, _ := strconv.Atoi(envCount)
     if count == 0 {
         count = 1
     }
-
     return count
 }
 
-func serve(id, runtime string, index int) {
+func serveHttp(id, runtime string, index int) {
 
-    fmt.Println("Starting server: ", index)
+    fmt.Println("Starting HTTP server: ", index)
 
-    envPort := os.Getenv(fmt.Sprint("SAVA_RUNNER_PORT", index))
+    envPort := os.Getenv(fmt.Sprint("SAVA_RUNNER_HTTP_PORT", index))
     envPortNumber, _ := strconv.Atoi(envPort)
 
     if envPortNumber == 0 {
         envPortNumber = 8080 + index
     }
 
-    arg := fmt.Sprint("port", index)
-    description := fmt.Sprint("Sets the port ", index, " to listen on")
+    arg := fmt.Sprint("http-port-", index)
+    description := fmt.Sprint("Sets the HTTP port ", index, " to listen on")
 
     port := flag.Int(arg, envPortNumber, description)
 
     flag.Parse()
 
-    fmt.Println("Listening on port: ", *port)
+    fmt.Println("Listening on HTTP port: ", *port)
 
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         path := html.EscapeString(r.URL.Path)[1:]
@@ -109,4 +122,53 @@ func serve(id, runtime string, index int) {
     })
 
     log.Fatal(http.ListenAndServe(":" + strconv.Itoa(*port), nil))
+}
+
+func serveTcp(id, runtime string, index int) {
+
+    fmt.Println("Starting TCP server: ", index)
+
+    envPort := os.Getenv(fmt.Sprint("SAVA_RUNNER_TCP_PORT", index))
+    envPortNumber, _ := strconv.Atoi(envPort)
+
+    if envPortNumber == 0 {
+        envPortNumber = 8090 + index
+    }
+
+    arg := fmt.Sprint("tcp-port-", index)
+    description := fmt.Sprint("Sets the TCP port ", index, " to listen on")
+
+    port := flag.Int(arg, envPortNumber, description)
+
+    flag.Parse()
+
+    fmt.Println("Listening on TCP port: ", *port)
+
+    listener, err := net.Listen("tcp", fmt.Sprint("localhost:", *port))
+    if err != nil {
+        log.Fatal("Error listening: ", err.Error())
+    }
+
+    defer listener.Close()
+
+    for {
+        conn, err := listener.Accept()
+        if err != nil {
+            fmt.Println("Error accepting: ", err.Error())
+        } else {
+            go handleTcpRequest(conn)
+        }
+    }
+}
+
+func handleTcpRequest(conn net.Conn) {
+    buf := make([]byte, 1024)
+    reqLen, err := conn.Read(buf)
+    if err != nil {
+        fmt.Println("Error reading:", err.Error())
+    } else {
+        conn.Write([]byte("Message received: "))
+        conn.Write(buf[:reqLen])
+    }
+    conn.Close()
 }
