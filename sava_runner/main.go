@@ -144,7 +144,7 @@ func serveTcp(id, runtime string, index int) {
 
     fmt.Println("Listening on TCP port: ", *port)
 
-    listener, err := net.Listen("tcp", fmt.Sprint("localhost:", *port))
+    listener, err := net.Listen("tcp", fmt.Sprint(":", *port))
     if err != nil {
         log.Fatal("Error listening: ", err.Error())
     }
