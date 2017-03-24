@@ -20,8 +20,7 @@ func main() {
 
 	flag.Parse()
 
-	envBackend1 := os.Getenv("BACKEND_1")
-	envBackend2 := os.Getenv("BACKEND_2")
+	envBackend := os.Getenv("BACKEND")
 	envPort := os.Getenv("SAVA_PORT")
 
 	if envPort != "" {
@@ -30,18 +29,29 @@ func main() {
 
 	r := gin.Default()
 
-	r.Static("/public", "./public")
+	r.Static("/js", "./public/js")
+	r.Static("/css", "./public/css")
+	r.Static("/public/js", "./public/js")
+	r.Static("/public/css", "./public/css")
 
-	r.GET("/api/message1", func(c *gin.Context) {
-		GetMessage(c, envBackend1)
+	r.GET("/api/message", func(c *gin.Context) {
+		GetMessage(c, envBackend)
 	})
 
-	r.GET("/api/message2", func(c *gin.Context) {
-		GetMessage(c, envBackend2)
+	r.GET("/public/api/message", func(c *gin.Context) {
+		GetMessage(c, envBackend)
 	})
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusMovedPermanently, "/public")
+		c.File("/public/index.html")
+	})
+
+	r.GET("/public", func(c *gin.Context) {
+		c.File("/public/index.html")
+	})
+
+	r.GET("/public/", func(c *gin.Context) {
+		c.File("/public/index.html")
 	})
 
 	r.Run(":" + strconv.Itoa(*port))

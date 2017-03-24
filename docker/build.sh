@@ -74,13 +74,3 @@ buildDockerImageFor sava-frontend:1.3.${VERSION} sava_frontend_1.3
 
 echo "building docker image: sava-backend:1.3".${VERSION}
 buildDockerImageFor sava-backend:1.3.${VERSION} sava_backend_1.2
-
-
-# echo "pushing docker images..."
-# docker push magneticio/sava:1.0.${VERSION}
-# docker push magneticio/sava:1.1.${VERSION}
-# docker push magneticio/sava-frontend:1.2.${VERSION}
-# docker push magneticio/sava-backend1:1.2.${VERSION}
-# docker push magneticio/sava-backend2:1.2.${VERSION}
-# docker push magneticio/sava-frontend:1.3.${VERSION}
-# docker push magneticio/sava-backend:1.3.${VERSION}
